@@ -238,21 +238,21 @@ public static class ExcelUpdater
         if (startRow > endRow)
             return;
 
-        CopyRowStyleAndFormulas(ws, headerStyleRow, startRow, clearBottomBorder: true);
+        CopyRowStyleAndFormulas(ws, headerStyleRow, startRow);
 
         if (startRow == endRow)
         {
-            CopyRowStyleAndFormulas(ws, footerStyleRow + diff, startRow, clearBottomBorder: false);
+            CopyRowStyleAndFormulas(ws, footerStyleRow + diff, startRow);
             return;
         }
 
         for (var r = startRow + 1; r < endRow; r++)
-            CopyRowStyleAndFormulas(ws, detailStyleRow + Math.Max(diff, 0), r, clearBottomBorder: true);
+            CopyRowStyleAndFormulas(ws, detailStyleRow + Math.Max(diff, 0), r);
 
-        CopyRowStyleAndFormulas(ws, footerStyleRow + diff, endRow, clearBottomBorder: false);
+        CopyRowStyleAndFormulas(ws, footerStyleRow + diff, endRow);
     }
 
-    private static void CopyRowStyleAndFormulas(IXLWorksheet ws, int sourceRow, int targetRow, bool clearBottomBorder)
+    private static void CopyRowStyleAndFormulas(IXLWorksheet ws, int sourceRow, int targetRow)
     {
         ws.Row(targetRow).Height = ws.Row(sourceRow).Height;
         var lastCol = ws.LastColumnUsed()?.ColumnNumber() ?? 18;
@@ -263,9 +263,6 @@ public static class ExcelUpdater
             var target = ws.Cell(targetRow, c);
 
             target.Style = source.Style;
-
-            if (clearBottomBorder)
-                target.Style.Border.BottomBorder = XLBorderStyleValues.None;
 
             if (!string.IsNullOrWhiteSpace(source.FormulaA1))
                 target.FormulaA1 = source.FormulaA1;

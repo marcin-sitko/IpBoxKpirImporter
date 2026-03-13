@@ -80,3 +80,18 @@ v12 cleanup:
 - poprawione style:
   - wewnętrzne wiersze miesiąca mają usuwany dolny gruby border,
   - gruby dolny border zostaje tylko na ostatnim wierszu miesiąca.
+
+
+v13:
+- fix kompilacji CS1729:
+  PdfCellGridExtractor ma znowu konstruktor:
+  PdfCellGridExtractor(string debugFolder, bool debugEnabled = false)
+
+
+v14:
+- fix borderów: nie kasuje już dolnego borderu w wierszach wewnętrznych,
+- style wierszy są kopiowane dokładnie z odpowiedniego wiersza wzorcowego:
+  - header -> pierwszy wiersz miesiąca
+  - detail -> wiersze środkowe
+  - footer -> ostatni wiersz miesiąca
+- to naprawia brak dolnych borderów typu J15:J22.
