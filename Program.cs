@@ -7,18 +7,19 @@ using IpBoxKpirImporter.Services;
 
 if (args.Length < 3)
 {
-    Console.WriteLine("Usage: IpBoxKpirImporter <kpir_folder> <excel_template> <output_folder>");
+    Console.WriteLine("Usage: IpBoxKpirImporter <kpir_folder> <excel_template> <output_folder> [--debug]");
     return;
 }
 
 var kpirFolder = args[0];
 var excelTemplate = args[1];
 var outputFolder = args[2];
+var debugEnabled = args.Any(a => string.Equals(a, "--debug", StringComparison.OrdinalIgnoreCase));
 
 Directory.CreateDirectory(outputFolder);
 
 Console.WriteLine("[1/4] Wykrywam siatkę komórek i odczytuję tabelę KPiR z PDF...");
-var extractor = new PdfCellGridExtractor(outputFolder);
+var extractor = new PdfCellGridExtractor(outputFolder, debugEnabled);
 var tableRows = new List<KpirTableRow>();
 
 foreach (var file in Directory.GetFiles(kpirFolder, "*.pdf").OrderBy(x => x))
@@ -57,3 +58,5 @@ Console.WriteLine();
 Console.WriteLine("Gotowe:");
 Console.WriteLine(importPath);
 Console.WriteLine(outputWorkbook);
+if (debugEnabled)
+    Console.WriteLine("Pliki debug zapisane w folderze wyjściowym.");

@@ -25,6 +25,9 @@ public static class ExcelUpdater
         [12] = "Grudzień",
     };
 
+    private static readonly int[] MonthMergedColumns = { 3, 4, 5, 6, 7, 8, 12 };
+    private static readonly int[] DataClearColumns = { 3, 4, 5, 7, 8, 9, 11, 13, 18 };
+
     public static void WriteImportWorkbook(string path, List<KpirEntry> entries)
     {
         using var wb = new XLWorkbook();
@@ -87,7 +90,7 @@ public static class ExcelUpdater
 
             var headerStyleRow = startRow;
             var detailStyleRow = Math.Min(startRow + 1, endRow);
-            var lastStyleRow = endRow;
+            var footerStyleRow = endRow;
 
             if (diff > 0)
                 ws.Row(endRow).InsertRowsBelow(diff);
@@ -96,79 +99,74 @@ public static class ExcelUpdater
 
             var newEndRow = startRow + requiredRows - 1;
 
-            // Apply styles/row heights explicitly so inserted rows match template and bottom border stays only on last row.
-            ApplyRowStyle(ws, headerStyleRow, startRow);
-            if (requiredRows == 1)
-            {
-                ApplyRowStyle(ws, lastStyleRow + diff, startRow);
-            }
-            else
-            {
-                for (var r = startRow + 1; r < newEndRow; r++)
-                    ApplyRowStyle(ws, detailStyleRow + Math.Max(diff, 0), r);
-
-                ApplyRowStyle(ws, lastStyleRow + diff, newEndRow);
-            }
-
-            // Ensure merged month columns span the entire month block exactly once.
+            RestyleMonthBlock(ws, startRow, newEndRow, headerStyleRow, detailStyleRow, footerStyleRow, diff);
             ResetMonthMerges(ws, startRow, newEndRow);
-
-            // Clear only user/data input cells. Keep template formulas in J and L.
-            for (var r = startRow; r <= newEndRow; r++)
-            {
-                foreach (var c in new[] { 3, 4, 5, 6, 7, 8, 9, 11, 13, 18 })
-                    ws.Cell(r, c).Clear(XLClearOptions.Contents);
-            }
-
-            // Header row data.
-            ws.Cell(startRow, 3).Value = MonthNamesPl[month]; // C
-            ws.Cell(startRow, 4).Clear(XLClearOptions.Contents); // D manual
-            var revenueDocs = string.Join("; ", revenueEntries.Select(x => x.DocumentNumber).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct());
-            ws.Cell(startRow, 5).Value = revenueDocs; // E
-            ws.Cell(startRow, 6).FormulaA1 = $"IFERROR(H{startRow}/G{startRow},\"\")"; // F
-            var revenueAmount = revenueEntries.Sum(x => x.Amount);
-            if (revenueAmount > 0)
-                ws.Cell(startRow, 7).Value = revenueAmount; // G
-            else
-                ws.Cell(startRow, 7).Clear(XLClearOptions.Contents);
-            ws.Cell(startRow, 8).Clear(XLClearOptions.Contents); // H manual
-            ws.Cell(startRow, 12).FormulaA1 = $"=H{startRow}-SUM(J{startRow}:J{newEndRow})"; // L
-
-            // Rebuild J formulas sequentially from the template pattern.
-            // We keep the original absolute reference to F in the month header row,
-            // but row-relative reference to I must advance with each detail row.
-            for (var r = startRow; r <= newEndRow; r++)
-            {
-                ws.Cell(r, 10).FormulaA1 = $"=I{r}*$F${startRow}";
-            }
-
-            // Cost rows.
-            for (var idx = 0; idx < requiredRows; idx++)
-            {
-                var row = startRow + idx;
-                var cost = idx < costEntries.Count ? costEntries[idx] : null;
-
-                if (cost != null)
-                {
-                    ws.Cell(row, 9).Value = cost.Amount; // I
-                    // Keep template formula in J unchanged.
-                    ws.Cell(row, 11).Value = BuildCostLabel(cost); // K
-                    ws.Cell(row, 13).Value = cost.Amount; // M - koszty bezpośrednie
-                    ws.Cell(row, 18).Value = cost.Lp; // R - numer w KPiR
-                }
-                else
-                {
-                    ws.Cell(row, 9).Clear(XLClearOptions.Contents);
-                    ws.Cell(row, 11).Clear(XLClearOptions.Contents);
-                    ws.Cell(row, 13).Clear(XLClearOptions.Contents);
-                    ws.Cell(row, 18).Clear(XLClearOptions.Contents);
-                }
-            }
+            ClearMonthData(ws, startRow, newEndRow);
+            PopulateMonthHeader(ws, startRow, newEndRow, month, revenueEntries);
+            PopulateMonthCosts(ws, startRow, newEndRow, costEntries);
 
             offset += diff;
         }
 
         wb.Save();
+    }
+
+    private static void PopulateMonthHeader(IXLWorksheet ws, int startRow, int endRow, int month, List<KpirEntry> revenueEntries)
+    {
+        ws.Cell(startRow, 3).Value = MonthNamesPl[month];
+        ws.Cell(startRow, 4).Clear(XLClearOptions.Contents);
+        ws.Cell(startRow, 8).Clear(XLClearOptions.Contents);
+
+        var revenueDocs = string.Join("; ", revenueEntries
+            .Select(x => x.DocumentNumber)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct());
+
+        ws.Cell(startRow, 5).Value = revenueDocs;
+
+        var revenueAmount = revenueEntries.Sum(x => x.Amount);
+        if (revenueAmount > 0)
+            ws.Cell(startRow, 7).Value = revenueAmount;
+        else
+            ws.Cell(startRow, 7).Clear(XLClearOptions.Contents);
+
+        ws.Cell(startRow, 6).FormulaA1 = $"=H{startRow}/G{startRow}";
+        ws.Cell(startRow, 12).FormulaA1 = $"=H{startRow}-SUM(J{startRow}:J{endRow})";
+    }
+
+    private static void PopulateMonthCosts(IXLWorksheet ws, int startRow, int endRow, List<KpirEntry> costEntries)
+    {
+        for (var row = startRow; row <= endRow; row++)
+        {
+            var idx = row - startRow;
+            var cost = idx < costEntries.Count ? costEntries[idx] : null;
+
+            ws.Cell(row, 10).FormulaA1 = $"=I{row}*$F${startRow}";
+
+            if (cost != null)
+            {
+                ws.Cell(row, 9).Value = cost.Amount;
+                ws.Cell(row, 11).Value = BuildCostLabel(cost);
+                ws.Cell(row, 13).Value = cost.Amount;
+                ws.Cell(row, 18).Value = cost.Lp;
+            }
+            else
+            {
+                ws.Cell(row, 9).Clear(XLClearOptions.Contents);
+                ws.Cell(row, 11).Clear(XLClearOptions.Contents);
+                ws.Cell(row, 13).Clear(XLClearOptions.Contents);
+                ws.Cell(row, 18).Clear(XLClearOptions.Contents);
+            }
+        }
+    }
+
+    private static void ClearMonthData(IXLWorksheet ws, int startRow, int endRow)
+    {
+        for (var r = startRow; r <= endRow; r++)
+        {
+            foreach (var c in DataClearColumns)
+                ws.Cell(r, c).Clear(XLClearOptions.Contents);
+        }
     }
 
     private static Dictionary<int, int> FindMonthStartRows(IXLWorksheet ws)
@@ -212,25 +210,49 @@ public static class ExcelUpdater
 
     private static void ResetMonthMerges(IXLWorksheet ws, int startRow, int endRow)
     {
-        var colsToMerge = new[] { 3, 4, 5, 6, 7, 8, 12 }; // C,D,E,F,G,H,L
-
         var intersecting = ws.MergedRanges
             .Where(r => r.RangeAddress.FirstAddress.RowNumber <= endRow &&
                         r.RangeAddress.LastAddress.RowNumber >= startRow &&
-                        colsToMerge.Contains(r.RangeAddress.FirstAddress.ColumnNumber))
+                        MonthMergedColumns.Contains(r.RangeAddress.FirstAddress.ColumnNumber))
             .ToList();
 
         foreach (var r in intersecting)
             r.Unmerge();
 
-        foreach (var col in colsToMerge)
-        {
-            if (endRow > startRow)
-                ws.Range(startRow, col, endRow, col).Merge();
-        }
+        if (endRow <= startRow)
+            return;
+
+        foreach (var col in MonthMergedColumns)
+            ws.Range(startRow, col, endRow, col).Merge();
     }
 
-    private static void ApplyRowStyle(IXLWorksheet ws, int sourceRow, int targetRow)
+    private static void RestyleMonthBlock(
+        IXLWorksheet ws,
+        int startRow,
+        int endRow,
+        int headerStyleRow,
+        int detailStyleRow,
+        int footerStyleRow,
+        int diff)
+    {
+        if (startRow > endRow)
+            return;
+
+        CopyRowStyleAndFormulas(ws, headerStyleRow, startRow, clearBottomBorder: true);
+
+        if (startRow == endRow)
+        {
+            CopyRowStyleAndFormulas(ws, footerStyleRow + diff, startRow, clearBottomBorder: false);
+            return;
+        }
+
+        for (var r = startRow + 1; r < endRow; r++)
+            CopyRowStyleAndFormulas(ws, detailStyleRow + Math.Max(diff, 0), r, clearBottomBorder: true);
+
+        CopyRowStyleAndFormulas(ws, footerStyleRow + diff, endRow, clearBottomBorder: false);
+    }
+
+    private static void CopyRowStyleAndFormulas(IXLWorksheet ws, int sourceRow, int targetRow, bool clearBottomBorder)
     {
         ws.Row(targetRow).Height = ws.Row(sourceRow).Height;
         var lastCol = ws.LastColumnUsed()?.ColumnNumber() ?? 18;
@@ -242,12 +264,11 @@ public static class ExcelUpdater
 
             target.Style = source.Style;
 
+            if (clearBottomBorder)
+                target.Style.Border.BottomBorder = XLBorderStyleValues.None;
+
             if (!string.IsNullOrWhiteSpace(source.FormulaA1))
-            {
-                // Copy formula in a way that preserves relative row references,
-                // e.g. =I7*$F$3 -> =I8*$F$3 on the next inserted row.
                 target.FormulaA1 = source.FormulaA1;
-            }
         }
     }
 

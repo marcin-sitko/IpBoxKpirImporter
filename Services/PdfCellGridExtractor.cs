@@ -13,11 +13,13 @@ namespace IpBoxKpirImporter.Services;
 public sealed class PdfCellGridExtractor
 {
     private readonly string debugFolder;
+    private readonly bool debugEnabled;
     private static readonly Regex DateRegex = new(@"\b\d{2}-\d{2}-\d{4}\b", RegexOptions.Compiled);
 
-    public PdfCellGridExtractor(string debugFolder)
+    public PdfCellGridExtractor(string debugFolder, bool debugEnabled = false)
     {
         this.debugFolder = debugFolder;
+        this.debugEnabled = debugEnabled;
     }
 
     public List<KpirTableRow> Extract(string pdfPath)
@@ -51,7 +53,9 @@ public sealed class PdfCellGridExtractor
                 var cells = BuildCells(lines);
                 var rows = SerializeRows(words, cells, page.Number);
 
-                SaveDebug(baseName, page.Number, lines, rows);
+                if (debugEnabled)
+                    if (debugEnabled)
+                    SaveDebug(baseName, page.Number, lines, rows);
                 results.AddRange(rows);
             }
 
