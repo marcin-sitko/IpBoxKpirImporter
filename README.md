@@ -95,3 +95,55 @@ v14:
   - detail -> wiersze środkowe
   - footer -> ostatni wiersz miesiąca
 - to naprawia brak dolnych borderów typu J15:J22.
+
+
+v15:
+- dodany folder `test-data/` z referencyjnym PDF:
+  - `KPiR 01_2026.pdf`
+- dodany prosty test integracyjny:
+  - projekt `SmokeTests`
+  - sprawdza liczbę wierszy tabeli, liczbę wpisów i sekwencję LP
+- flaga `--debug` zostaje w głównym programie:
+  - bez flagi nie zapisuje plików debug
+  - z flagą zapisuje pliki debug do folderu wyjściowego
+
+Uruchamianie:
+- test integracyjny:
+  - `powershell -ExecutionPolicy Bypass -File .\tools\run-smoke-test.ps1`
+- przykład uruchomienia z debug:
+  - `powershell -ExecutionPolicy Bypass -File .\tools\run-debug-example.ps1`
+
+
+v16:
+- wszystko zostało przeniesione do katalogu `IpBoxKpirImporter/`, żeby pasowało do struktury repo:
+  - `IpBoxKpirImporter/SmokeTests`
+  - `IpBoxKpirImporter/test-data`
+  - `IpBoxKpirImporter/tools`
+- poprawione ścieżki w testach i skryptach po przeniesieniu.
+
+
+v17:
+- test integracyjny został przeniesiony na xUnit, żeby dało się go uruchamiać bezpośrednio z Visual Studio / Test Explorer
+- dodane:
+  - `IpBoxKpirImporter.sln`
+  - `IpBoxKpirImporter.Tests/`
+- referencyjny PDF dalej siedzi w:
+  - `test-data/KPiR 01_2026.pdf`
+
+Uruchamianie w Visual Studio:
+1. Otwórz `IpBoxKpirImporter.sln`
+2. Build solution
+3. Test Explorer -> Run All
+
+Uruchamianie z CLI:
+- `dotnet test IpBoxKpirImporter.sln`
+
+
+v18:
+- fix dla xUnit / Visual Studio:
+  - główny projekt `IpBoxKpirImporter.csproj` wyklucza teraz folder `IpBoxKpirImporter.Tests`
+  - to usuwa błędy:
+    - duplicate assembly attributes
+    - missing `Fact` / `Xunit`
+    - missing `IpBoxKpirImporter.dll`
+- przyczyną było to, że pliki testów siedziały pod katalogiem głównego projektu i były przez SDK automatycznie wciągane do kompilacji aplikacji.

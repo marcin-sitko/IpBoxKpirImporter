@@ -5,10 +5,18 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.104.2" />
     <PackageReference Include="PdfPig" Version="0.1.13" />
     <PackageReference Include="OpenCvSharp4" Version="4.10.0.20240616" />
     <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.10.0.20240616" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="IpBoxKpirImporter.Tests\**\*.cs" />
+    <None Remove="IpBoxKpirImporter.Tests\**\*" />
+    <EmbeddedResource Remove="IpBoxKpirImporter.Tests\**\*" />
+    <Content Remove="IpBoxKpirImporter.Tests\**\*" />
   </ItemGroup>
 </Project>
