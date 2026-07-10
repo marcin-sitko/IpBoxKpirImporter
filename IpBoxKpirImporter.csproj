@@ -6,11 +6,25 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Windows: use native OpenCvSharp for grid detection -->
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.104.2" />
     <PackageReference Include="PdfPig" Version="0.1.13" />
+  </ItemGroup>
+
+  <!-- OpenCvSharp only on Windows; macOS/Linux use pyhelper/detect_grid.py -->
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
     <PackageReference Include="OpenCvSharp4" Version="4.10.0.20240616" />
     <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.10.0.20240616" />
+  </ItemGroup>
+
+  <!-- Ship the Python grid detector next to the executable -->
+  <ItemGroup>
+    <None Include="pyhelper/detect_grid.py" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

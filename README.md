@@ -1,3 +1,18 @@
+# IpBoxKpirImporter
+
+Import danych z PDF KPiR (InsERT nexo) do szablonu Excel „Ewidencja IP BOX”.
+
+**Dokumentacja:**
+- [docs/URUCHOMIENIE.md](docs/URUCHOMIENIE.md) – wymagania, build, uruchomienie, testy, mapowanie kolumn.
+- [docs/ip-box-ewidencja-instrukcja.md](docs/ip-box-ewidencja-instrukcja.md) – reguły biznesowe IP Box (transkrypcja materiałów źródłowych).
+- [ARCHITECTURE.md](ARCHITECTURE.md) · [PROJECT_STATE.md](PROJECT_STATE.md) · [CHANGELOG.md](CHANGELOG.md)
+- Materiały źródłowe: [docs/uzupelnianie-ewidencji.pdf](docs/uzupelnianie-ewidencji.pdf), [docs/koszty.docx](docs/koszty.docx)
+- Szablon wejściowy: [templates/Ewidencja_IP_BOX-wzor.xlsx](templates/Ewidencja_IP_BOX-wzor.xlsx) · PDF-y testowe: `test-data/`
+
+---
+
+## Historia zmian parsera
+
 Cell-grid v2:
 - strony bez pionowych linii dziedziczą układ kolumn z poprzedniej strony PDF,
 - słowa są przypisywane do komórek po maksymalnym overlapie poziomym, nie tylko po środku,

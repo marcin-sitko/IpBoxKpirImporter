@@ -1,10 +1,19 @@
 using System;
 using System.Collections.Generic;
+#if WINDOWS
 using System.Linq;
 using OpenCvSharp;
+#else
+using System.IO;
+using System.Text.Json;
+#endif
 
 namespace IpBoxKpirImporter.Services;
 
+// Grid-line detection for KPiR table pages.
+//   Windows  -> OpenCvSharp (native, unchanged behaviour).
+//   macOS/Linux -> identical algorithm via pyhelper/detect_grid.py (Python + OpenCV).
+// The backend is selected at build time by the WINDOWS constant (see .csproj).
 public static class ImageGridDetector
 {
     public sealed class GridLines
@@ -15,6 +24,7 @@ public static class ImageGridDetector
         public List<int> Vertical { get; set; } = new();
     }
 
+#if WINDOWS
     public static GridLines Detect(string imagePath)
     {
         using var src = Cv2.ImRead(imagePath, ImreadModes.Grayscale);
@@ -88,4 +98,34 @@ public static class ImageGridDetector
         result.Add((int)Math.Round(group.Average()));
         return result;
     }
+#else
+    private sealed class Payload
+    {
+        public int width { get; set; }
+        public int height { get; set; }
+        public List<int> horizontal { get; set; } = new();
+        public List<int> vertical { get; set; } = new();
+    }
+
+    public static GridLines Detect(string imagePath)
+    {
+        var script = Path.Combine(AppContext.BaseDirectory, "pyhelper", "detect_grid.py");
+        if (!File.Exists(script))
+            script = Path.Combine(Directory.GetCurrentDirectory(), "pyhelper", "detect_grid.py");
+        if (!File.Exists(script))
+            throw new FileNotFoundException($"Nie znaleziono skryptu detektora siatki: {script}");
+
+        var json = ProcessRunner.Run("python3", $"\"{script}\" \"{imagePath}\"");
+        var p = JsonSerializer.Deserialize<Payload>(json)
+                ?? throw new InvalidOperationException("Pusta odpowiedź detektora siatki.");
+
+        return new GridLines
+        {
+            Width = p.width,
+            Height = p.height,
+            Horizontal = p.horizontal,
+            Vertical = p.vertical
+        };
+    }
+#endif
 }
